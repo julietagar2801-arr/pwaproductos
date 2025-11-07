@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Productos (con LocalStorage + Imagenes)</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        .thumb { height: 70px; object-fit: cover; border-radius: 0.35rem; }
+        .thumbs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg" style="background-color: #122C4F">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#"><p style="color:aliceblue">Gadget Go</p></a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul  class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="#inicio"><p style="color:aliceblue">Inicio</p></a></li>
+                    <li class="nav-item"><a class="nav-link" href="#proyectos"><p style="color:aliceblue">Proyectos</p></a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#invitacionModal"><p style="color:aliceblue">Modal</p></a></li>
+                    <!--tooltip-->
+                    <li class="nav-item"><a class="nav-link" href="#contacto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Haz clic para ver más informacion"><p style="color:aliceblue">Contacto</p></a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+
+
+    <div class="container py-5">
+        <div class="text-center mb-4">
+            <h1 class="display-4 text-primary mb-3"><p style="color:#122C4F">Gestión de Productos</p></h1>
+            <button type="button" class="btn btn-outline-primary btn-lg ms-2" data-bs-toggle="modal" data-bs-target="#productoModal" style="color: #5B88B2;">
+                Registrar Nuevo Producto
+            </button>
+
+            <button id="clearAll" class="btn btn-outline-danger btn-lg ms-2">
+                Limpiar todo (LocalStorage)
+            </button>
+        </div>
+        <div id="productsContainer" class="row mt-4"></div>
+    </div>
+
+    <div class="modal fade" id="productoModal" tabindex="-1" aria-labelledby="productoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="productoModalLabel">Registro de Nuevo Producto</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="productoForm">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="claveProducto" class="form-label">Clave *</label>
+                                <input type="text" class="form-control" id="claveProducto" placeholder="Ej: ACC-001" required />
+                            </div>
+
+                            <div class="col-md-8">
+                                <label for="nombreProducto" class="form-label">Nombre *</label>
+                                <input type="text" class="form-control" id="nombreProducto" placeholder="Ej: Mouse Inalámbrico Ergonómico" required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="precioProducto" class="form-label">Precio *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="precioProducto" placeholder="0.00" step="0.01" required />
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="stockProducto" class="form-label">Stock *</label>
+                                <input type="number" class="form-control" id="stockProducto" placeholder="0" min="0" required />
+                            </div>
+
+                            <div class="col-12">
+                                <label for="descripcionProducto" class="form-label">Descripción</label>
+                                <textarea class="form-control" id="descripcionProducto" rows="3" placeholder="Detalles, especificaciones y compatibilidad..."></textarea>
+                            </div>
+
+                            <div class="col-12">
+                                <label for="imagenesProducto" class="form-label">Imágenes del Producto (puedes subir una o varias)</label>
+                                <input type="file" id="imagenesProducto" class="form-control" accept="image/*" multiple />
+                                <div class="form-text">Se guardan de forma temporal como Data URLs en el LocalStorage.</div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" form="productoForm" class="btn btn-primary">Guardar Producto</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Renombramos la variable a 'productos'
+        let productos = [];
+
+        // Cambiamos la clave del LocalStorage
+        const LS_KEY = 'productosAccesorios';
+        const modal = new bootstrap.Modal(document.getElementById('productoModal'));
+    
+        // Las funciones saveToLS, loadFromLS, currencyMX y readFilesAsDataURLs NO CAMBIAN
+        function saveToLS() {
+            localStorage.setItem(LS_KEY, JSON.stringify(productos));
+        }
+
+        function loadFromLS() {
+            try {
+                const raw = localStorage.getItem(LS_KEY);
+                productos = raw ? JSON.parse(raw) : [];
+            } catch (e) {
+                console.warn('LocalStorage corrupto, se reinicia.', e);
+                productos = [];
+                localStorage.removeItem(LS_KEY);
+            }
+        }
+        
+        function currencyMX(n) {
+            return Number(n).toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function readFilesAsDataURLs(fileList) {
+            const files = Array.from(fileList || []);
+            const readers = files.map(
+                (file) =>
+                    new Promise((resolve, reject) => {
+                        const fr = new FileReader();
+                        fr.onload = () => resolve({ name: file.name, type: file.type, dataURL: fr.result });
+                        fr.onerror = reject;
+                        fr.readAsDataURL(file);
+                    })
+                );
+                return Promise.all(readers);
+        }
+
+        // Render de tarjetas - ADAPTADO A PRODUCTOS
+        function renderProducts() {
+            const container = document.getElementById('productsContainer');
+            container.innerHTML = '';
+
+            // Definimos clases según la lógica de stock (ej. Stock bajo = warning)
+            const stockClasses = (stock) => {
+                if (stock == 0) return 'danger';
+                if (stock < 5) return 'warning';
+                return 'success';
+            };
+
+            // Recorrer y crear tarjetas por producto
+            productos.forEach((producto, idx) => {
+                const col = document.createElement('div');
+                col.className = 'col-md-6 col-lg-4 mb-4';
+
+                const thumbs = (producto.imagenes || []).slice(0, 3) //Mostrar hasta 3 miniaturas
+                .map((img) => `<img class="thumb w-100" src="${img.dataURL}" alt="${producto.nombre}" />`)
+                .join('');
+                
+                const extraCount = (producto.imagenes?.length || 0) - 3;
+                const extraBadge = extraCount > 0 ? `<span class="badge bg-secondary">+${extraCount} más</span>` : '';
+
+                col.innerHTML = `
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
+                            <h5 class="card-title mb-0">${producto.nombre}</h5>
+                            <button class="btn btn-sm btn-light" data-action="delete" data-index="${idx}" title="Eliminar">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text mb-2">
+                                <strong>Clave:</strong> ${producto.clave}<br />
+                                <strong>Precio:</strong> ${currencyMX(producto.precio)}<br />
+                                <strong>Stock:</strong> ${producto.stock} Unidades
+                            </p>
+                            ${producto.descripcion ? `<p class="card-text text-muted"><small>${producto.descripcion}</small></p>` : ''}
+                            ${producto.imagenes && producto.imagenes.length 
+                                ? `<div class="thumbs-grid mt-2">${thumbs}</div>${extraBadge ? `<div class="mt-2">${extraBadge}</div>` : ''}`
+                                : `<div class="text-muted"><em>Sin imágenes</em></div>`}
+                        </div>
+                        <div class="card-footer">
+                            <span class="badge bg-${stockClasses(producto.stock)} w-100">Stock: ${producto.stock > 0 ? 'Disponible' : 'Agotado'}</span>
+                        </div>
+                    </div>`;
+
+                container.appendChild(col);
+            });
+
+            // Lógica de eliminación (NO CAMBIA)
+            container.querySelectorAll('[data-action="delete"]').forEach((btn) => {
+                btn.addEventListener('click', (e) => {
+                    const i = Number(e.currentTarget.getAttribute('data-index'));
+                    productos.splice(i, 1);
+                    saveToLS();
+                    renderProducts();
+                });
+            });
+        }
+
+        // Toast helper (NO CAMBIA)
+        function showToast(msg, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className ='toast align-items-center text-bg-' + (type === 'success' ? 'success' : 'danger') + 'position-fixed top-0 end-0 m-3';
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${msg}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>`;
+            document.body.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            setTimeout(() => toast.remove(), 3500);
+        }
+
+        // Submit del formulario - ADAPTADO A PRODUCTOS
+        document.getElementById('productoForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const imagenesInput = document.getElementById('imagenesProducto');
+            let imagenes = [];
+            try {
+                imagenes = await readFilesAsDataURLs(imagenesInput.files);
+            } catch (err) {
+                console.error('Error leyendo imágenes', err);
+                showToast('Hubo un problema leyendo las imágenes', 'error');
+            }
+
+            const producto = {
+                // Generar un id único
+                id: crypto.randomUUID(),
+                clave: document.getElementById('claveProducto').value.trim(),
+                nombre: document.getElementById('nombreProducto').value.trim(),
+                precio: parseFloat(document.getElementById('precioProducto').value),
+                stock: parseInt(document.getElementById('stockProducto').value, 10),
+                descripcion: document.getElementById('descripcionProducto').value.trim(),
+                imagenes, //[{name, type, dataURL }, ...]
+            };
+
+            productos.push(producto);
+            saveToLS();
+            renderProducts();
+
+            // Limpiar y cerrar
+            this.reset();
+            modal.hide();
+            showToast('Producto guardado correctamente');
+        });
+
+        // Cargar al iniciar y limpiar (ADAPTADO)
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFromLS();
+            renderProducts();
+
+            // Limpiar todo el local storage
+            document.getElementById('clearAll').addEventListener('click', () => {
+                if (confirm('¿Seguro que deseas borrar todos los productos guardados en este navegador?')) {
+                    productos = [];
+                    saveToLS();
+                    renderProducts();
+                    showToast('LocalStorage limpiado');
+                }
+            });
+        });
+    </script>  
+</body>
+</html>
